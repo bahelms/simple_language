@@ -1,1 +1,1 @@
-This is the implementation of the Simple programming language from Understanding Computation by Author.
+This is the implementation of the Simple programming language from Understanding Computation by Tom Stuart.
