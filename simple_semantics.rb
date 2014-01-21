@@ -1,5 +1,6 @@
 # Operational semantics
 # Small-step semantics describing the AST of the Simple language
+# Big-step semantics applies to the #evaulate method
 
 class Machine < Struct.new(:statement, :environment)
   def step
@@ -21,18 +22,31 @@ module Inspect
   end
 end
 
+module Reducible
+  def reducible?
+    true
+  end
+end
+
+module NotReducible
+  def reducible?
+    false
+  end
+end
+
 class Variable < Struct.new(:name)
   include Inspect 
+  include Reducible
 
   def to_s
     name.to_s
   end
 
-  def reducible?
-    true
+  def reduce(environment)
+    environment[name]
   end
 
-  def reduce(environment)
+  def evaluate(environment)
     environment[name]
   end
 end
@@ -41,13 +55,14 @@ end
 
 class Value < Struct.new(:value)
   include Inspect 
+  include NotReducible
 
   def to_s
     value.to_s
   end
 
-  def reducible?
-    false
+  def evaluate(environment)
+    self
   end
 end
 
@@ -61,10 +76,7 @@ end
 
 class Expression < Struct.new(:left, :right)
   include Inspect 
-
-  def reducible?
-    true
-  end
+  include Reducible
 end
 
 class Add < Expression
@@ -80,6 +92,10 @@ class Add < Expression
     else
       Number.new(left.value + right.value)
     end
+  end
+
+  def evaluate(environment)
+    Number.new(left.evaluate(environment).value + right.evaluate(environment).value)
   end
 end
 
@@ -97,6 +113,10 @@ class Multiply < Expression
       Number.new(left.value * right.value)
     end
   end
+
+  def evaluate(environment)
+    Number.new(left.evaluate(environment).value * right.evaluate(environment).value)
+  end
 end
 
 class LessThan < Expression
@@ -113,12 +133,17 @@ class LessThan < Expression
       Boolean.new(left.value < right.value)
     end
   end
+  
+  def evaluate(environment)
+    Number.new(left.evaluate(environment).value < right.evaluate(environment).value)
+  end
 end
 
 # Statements
 
 class DoNothing
   include Inspect
+  include NotReducible
 
   def to_s
     "do-nothing"
@@ -127,21 +152,14 @@ class DoNothing
   def ==(other_statement)
     other_statement.instance_of? DoNothing
   end
-
-  def reducible?
-    false
-  end
 end
 
 class Assign < Struct.new(:name, :expression)
   include Inspect
+  include Reducible
 
   def to_s
     "#{name} = #{expression}"
-  end
-
-  def reducible?
-    true
   end
 
   def reduce(environment)
@@ -155,13 +173,10 @@ end
 
 class If < Struct.new(:condition, :consequence, :alternative)
   include Inspect
+  include Reducible
 
   def to_s
     "if (#{condition}) { #{consequence} } else { #{alternative} }"
-  end
-
-  def reducible?
-    true
   end
 
   def reduce(environment)
@@ -175,5 +190,37 @@ class If < Struct.new(:condition, :consequence, :alternative)
         [alternative, environment]
       end
     end
+  end
+end
+
+class Sequence < Struct.new(:first, :second)
+  include Inspect
+  include Reducible
+
+  def to_s
+    "#{first}; #{second}"
+  end
+
+  def reduce(environment)
+    case first
+    when DoNothing.new
+      [second, environment]
+    else
+      reduced_first, reduced_environment = first.reduce(environment)
+      [Sequence.new(reduced_first, second), reduced_environment]
+    end
+  end
+end
+
+class While < Struct.new(:condition, :body)
+  include Inspect
+  include Reducible
+
+  def to_s
+    "while (#{condition}) {#{body}}"
+  end
+
+  def reduce(environment)
+    [If.new(condition, Sequence.new(body, self), DoNothing.new), environment]
   end
 end
