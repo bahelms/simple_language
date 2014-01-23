@@ -1,6 +1,9 @@
 # Operational semantics
 # Small-step semantics describing the AST of the Simple language
 # Big-step semantics applies to the #evaulate method
+#
+# Denotational semantics
+# #to_ruby method
 
 class Machine < Struct.new(:statement, :environment)
   def step
@@ -49,6 +52,10 @@ class Variable < Struct.new(:name)
   def evaluate(environment)
     environment[name]
   end
+
+  def to_ruby
+    "-> e { e[#{name.inspect}] }"
+  end
 end
 
 # Values
@@ -63,6 +70,10 @@ class Value < Struct.new(:value)
 
   def evaluate(environment)
     self
+  end
+  
+  def to_ruby
+    "-> e { #{value.inspect} }"
   end
 end
 
@@ -97,6 +108,10 @@ class Add < Expression
   def evaluate(environment)
     Number.new(left.evaluate(environment).value + right.evaluate(environment).value)
   end
+
+  def to_ruby
+    "-> e { (#{left.to_ruby}).call(e) + (#{right.to_ruby}).call(e) }"
+  end
 end
 
 class Multiply < Expression
@@ -117,6 +132,10 @@ class Multiply < Expression
   def evaluate(environment)
     Number.new(left.evaluate(environment).value * right.evaluate(environment).value)
   end
+  
+  def to_ruby
+    "-> e { (#{left.to_ruby}).call(e) * (#{right.to_ruby}).call(e) }"
+  end
 end
 
 class LessThan < Expression
@@ -136,6 +155,10 @@ class LessThan < Expression
   
   def evaluate(environment)
     Boolean.new(left.evaluate(environment).value < right.evaluate(environment).value)
+  end
+
+  def to_ruby
+    "-> e { (#{left.to_ruby}).call(e) < (#{right.to_ruby}).call(e) }"
   end
 end
 

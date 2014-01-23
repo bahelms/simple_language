@@ -1,5 +1,6 @@
 require_relative "simple_semantics"
 
+puts "Small Step Semantics"
 statement = While.new(
   LessThan.new(Variable.new(:x), Number.new(5)),
   Assign.new(
@@ -10,20 +11,34 @@ statement = While.new(
     )
   )
 )
+env = { x: Number.new(1) }
 
-statement2 = Sequence.new(
+# Execute
+Machine.new(statement, env).run
+
+puts "------------------------------------------------------"
+puts
+puts "------------------------------------------------------"
+
+puts "Big Step Semantics"
+statement = Sequence.new(
   Assign.new(:x, Add.new(Number.new(1), Number.new(1))),
   Assign.new(:y, Add.new(Variable.new(:x), Number.new(3)))
 )
+env = {}
 
-env = { x: Number.new(1) }
-env2 = {}
-
-puts "Small Step Semantics"
-Machine.new(statement, env).run
-
-puts
-
-puts "Big Step Semantics"
+# Execute
 puts statement.evaluate(env)
 
+puts "------------------------------------------------------"
+puts
+puts "------------------------------------------------------"
+
+puts "Denotational Semantics"
+statement = LessThan.new(
+  Add.new(Variable.new(:x), Number.new(1)), Number.new(3)
+)
+env = {x: 3}
+
+# Execute
+puts eval(statement.to_ruby).call(env)
